@@ -23,12 +23,14 @@ objectives, controls ("how do I do the Talon Trot?").
 - Cover all ~300 English N64 manuals in the source collection.
 - Controls questions answered well, including information that lives only in
   controller diagrams.
-- Reachable from anywhere (phone or computer), but private to the owner.
+- Reachable from the owner's phone or computer on the home Wi-Fi network.
 
 ## Non-goals (for the MVP)
 
 - Multiple users or accounts. Single user: the owner.
-- Public internet hosting. Access is over a private network (Tailscale).
+- Access from outside the home network. (Possible later via Tailscale or a
+  login-protected tunnel; not in the MVP.)
+- Public internet hosting.
 - Cloud deployment. Runs on the owner's home computer.
 - Knowledge beyond the manual (walkthroughs, wikis, general web knowledge).
 - Other consoles. (The source site has a sibling SNES collection; design
@@ -53,7 +55,7 @@ objectives, controls ("how do I do the Talon Trot?").
 | Look and feel | Mockup C: dark, retro N64-flavored messaging layout; current game shown as a "cartridge" in the top bar with a swap control |
 | Web stack | Custom page (FastAPI backend + small HTML/JS front end), as implied by choosing C over Streamlit |
 | Hosting | Owner's home computer for the MVP |
-| Reach | Anywhere, private — over Tailscale; no public exposure |
+| Reach | Home Wi-Fi only for now; no Tailscale, no public exposure |
 | Game selection | User must pick a game before asking anything; it sticks until changed |
 | Retrieval | RAG: all manuals ingested up front into a vector database |
 | Ingestion | Download all manuals up front |
@@ -147,10 +149,14 @@ Example of the intended answer shape:
 
 ### 3. Access
 
-- The app listens on the home computer. The owner installs Tailscale on the
-  computer and phone and opens the app at the computer's Tailscale address.
-- The app must not be exposed to the public internet. No login is required
-  in the MVP because Tailscale limits who can reach it.
+- The app listens on the home computer's local network address. The owner
+  opens it on their phone at `http://<computer-LAN-IP>:<port>` while on the
+  home Wi-Fi.
+- The app must not be exposed to the public internet (no router port
+  forwarding). No login is required in the MVP: only devices on the home
+  network can reach it, which the owner accepts.
+- The startup output should print the LAN URL so the owner knows what to
+  open on the phone.
 
 ## Calls made by Claude (not owner decisions — open to change)
 
@@ -165,8 +171,8 @@ Example of the intended answer shape:
   user, so no per-browser sessions needed).
 - Out-of-manual reply wording: one short line, e.g. "The manual doesn't say —
   try a walkthrough."
-- Bind the server to the Tailscale interface or localhost rather than all
-  interfaces, to avoid accidental exposure on other networks.
+- Bind the server so it is reachable on the LAN (the phone can't reach a
+  localhost-only server); keep the port configurable.
 
 ## Left to the builder
 
