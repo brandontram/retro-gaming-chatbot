@@ -30,13 +30,14 @@ class StateStore:
 
     def _load(self) -> None:
         try:
-            raw = self._path.read_text()
+            raw = self._path.read_bytes()
         except FileNotFoundError:
             return
         except OSError as e:
             log.warning("Could not read state file %s: %s", self._path, e)
             return
         try:
+            raw = raw.decode("utf-8")
             data = json.loads(raw)
             game = data.get("game")
             hist = data.get("history", [])

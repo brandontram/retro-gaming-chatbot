@@ -48,7 +48,17 @@ def test_corrupt_file_starts_empty(tmp_path):
     assert s.active_game() is None
     assert s.history() == []
     p.write_text(json.dumps({"game": 5, "history": "x"}))
-    assert StateStore(p).active_game() is None
+    s = StateStore(p)
+    assert s.active_game() is None
+    assert s.history() == []
+
+
+def test_invalid_utf8_starts_empty(tmp_path):
+    p = tmp_path / "state.json"
+    p.write_bytes(b"\xff\xfe")
+    s = StateStore(p)
+    assert s.active_game() is None
+    assert s.history() == []
 
 
 def test_clear_game_and_history_copy(tmp_path):
