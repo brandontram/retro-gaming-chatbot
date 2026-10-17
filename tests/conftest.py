@@ -10,13 +10,16 @@ DIMS = 64
 
 
 class FakeLLM:
-    def __init__(self, responses=None, default: str = "ok"):
+    def __init__(self, responses=None, default: str = "ok", log: list | None = None):
+        self.log = log
         self.responses = list(responses or [])
         self.default = default
         self.generate_calls: list[dict] = []
         self.embed_calls: list[dict] = []
 
     def generate(self, prompt, *, system=None, image_png=None):
+        if self.log is not None:
+            self.log.append("GENERATE")
         self.generate_calls.append(
             {"prompt": prompt, "system": system, "image_png": image_png}
         )
