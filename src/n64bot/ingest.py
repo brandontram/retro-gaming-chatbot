@@ -7,8 +7,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable
 
-import fitz
 import httpx
+import pymupdf
 
 from .catalog import ManualRef, load_catalog
 from .config import Settings, load_settings
@@ -25,6 +25,7 @@ class IngestReport:
     indexed: list[str] = field(default_factory=list)
     failed_manuals: dict[str, str] = field(default_factory=dict)
     failed_pages: dict[str, list[int]] = field(default_factory=dict)
+    ocr_pages: dict[str, list[int]] = field(default_factory=dict)
 
 
 def _select(refs: list[ManualRef], only: str | None, limit: int | None) -> list[ManualRef]:
@@ -37,7 +38,7 @@ def _select(refs: list[ManualRef], only: str | None, limit: int | None) -> list[
 
 
 def _page_count(pdf: Path) -> int:
-    with fitz.open(str(pdf)) as doc:
+    with pymupdf.open(str(pdf)) as doc:
         return doc.page_count
 
 
@@ -88,7 +89,14 @@ def run_ingest(
             pages, failed = transcribe_manual(ref.slug, pdf, hocr, llm, settings)
             if failed:
                 report.failed_pages[ref.slug] = failed
-            store.replace_game(ref.slug, chunk_pages(ref.slug, ref.title, pages))
+            ocr = [pt.page for pt in pages if pt.source == "ocr"]
+            if ocr:
+                report.ocr_pages[ref.slug] = ocr
+            chunks = chunk_pages(ref.slug, ref.title, pages)
+            if not chunks:
+                report.failed_manuals[ref.slug] = "no pages transcribed"
+                continue
+            store.replace_game(ref.slug, chunks)
             report.indexed.append(ref.slug)
         except Exception as e:
             log.exception("%s: ingest failed", ref.slug)
@@ -107,6 +115,8 @@ def main() -> None:
     ap.add_argument("--limit", type=int, help="only the first N matching manuals")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO)
+    for noisy in ("httpx", "httpcore", "google_genai"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     settings = load_settings()
     llm = GeminiLLM(settings)
     with httpx.Client(timeout=60, follow_redirects=True) as client:
@@ -118,6 +128,8 @@ def main() -> None:
     print(f"Manuals with failed pages: {len(report.failed_pages)}")
     for slug, pg in report.failed_pages.items():
         print(f"  {slug}: pages {pg}")
+    print(f"Manuals with OCR-fallback pages: {len(report.ocr_pages)} "
+          f"({sum(len(v) for v in report.ocr_pages.values())} pages)")
     print(f"Details: {settings.data_dir / 'ingest_failures.json'}")
 
 

@@ -18,6 +18,8 @@ class Settings:
     price_out_per_mtok: float
     host: str = "0.0.0.0"
     port: int = 8000
+    gemini_timeout_s: float = 120
+    thinking_budget: int = 0
 
     @property
     def pdf_dir(self) -> Path:
@@ -59,4 +61,6 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         port=int(env.get("N64_PORT") or 8000),
         price_in_per_mtok=float(env.get("N64_PRICE_IN") or 0.30),
         price_out_per_mtok=float(env.get("N64_PRICE_OUT") or 2.50),
+        gemini_timeout_s=float(env.get("N64_GEMINI_TIMEOUT") or 120),
+        thinking_budget=int(env.get("N64_THINKING_BUDGET") or 0),
     )

@@ -17,12 +17,32 @@ class LLM(Protocol):
     ) -> list[list[float]]: ...
 
 
+def response_text(resp) -> str:
+    """Return the text of a successful (finish_reason STOP) response, else raise."""
+    cands = getattr(resp, "candidates", None)
+    if not cands:
+        raise RuntimeError("Gemini returned no candidates (blocked or empty)")
+    reason = getattr(cands[0], "finish_reason", None)
+    name = getattr(reason, "name", str(reason)) if reason is not None else None
+    if name != "STOP":
+        raise RuntimeError(f"Gemini response not completed: finish_reason={name}")
+    return resp.text or ""
+
+
 class GeminiLLM:
     def __init__(self, settings: Settings):
         from google import genai
 
         self._settings = settings
-        self._client = genai.Client(api_key=settings.gemini_api_key)
+        from google.genai import types
+
+        self._client = genai.Client(
+            api_key=settings.gemini_api_key,
+            http_options=types.HttpOptions(
+                timeout=int(settings.gemini_timeout_s * 1000),
+                retry_options=types.HttpRetryOptions(attempts=5, max_delay=60.0),
+            ),
+        )
 
     def generate(
         self, prompt: str, *, system: str | None = None, image_png: bytes | None = None
@@ -33,11 +53,16 @@ class GeminiLLM:
         if image_png is not None:
             contents.append(types.Part.from_bytes(data=image_png, mime_type="image/png"))
         contents.append(prompt)
-        config = types.GenerateContentConfig(system_instruction=system) if system else None
+        config = types.GenerateContentConfig(
+            system_instruction=system,
+            thinking_config=types.ThinkingConfig(
+                thinking_budget=self._settings.thinking_budget
+            ),
+        )
         resp = self._client.models.generate_content(
             model=self._settings.chat_model, contents=contents, config=config
         )
-        return resp.text or ""
+        return response_text(resp)
 
     def embed(
         self, texts: list[str], *, task: Literal["document", "query"]

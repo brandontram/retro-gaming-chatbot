@@ -70,3 +70,12 @@ def test_clear_game_and_history_copy(tmp_path):
     s.clear_game()
     assert s.active_game() is None and s.history() == []
     assert StateStore(tmp_path / "state.json").active_game() is None
+
+
+def test_append_if_only_when_game_still_active(tmp_path):
+    s = StateStore(tmp_path / "s.json")
+    s.set_game("a")
+    assert s.append_if("a", "q", "x") is True
+    s.set_game("b")
+    assert s.append_if("a", "late", "late") is False
+    assert s.history() == []

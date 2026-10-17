@@ -79,11 +79,14 @@ def transcribe_manual(
     lock = threading.Lock()
     slots = threading.Semaphore(max(workers, 1) * 2)  # bound rendered PNGs in memory
 
-    def work(page: int, png: bytes) -> None:
+    def work(page: int, png: bytes, existing: PageText | None) -> None:
         try:
             try:
                 pt = PageText(page, _generate(llm, png, page), "gemini")
             except Exception:
+                if existing is not None:  # keep the OCR page already on disk
+                    log.warning("page %d: Gemini retry failed, keeping OCR page", page)
+                    return
                 if hocr and page in hocr:
                     log.warning("page %d: falling back to OCR text", page)
                     pt = PageText(page, hocr[page].strip(), "ocr")
@@ -100,10 +103,10 @@ def transcribe_manual(
         futures = []
         for page, png in render_pages(pdf_path):
             existing = _load(page_path(settings, slug, page))
-            if existing is not None:
+            if existing is not None and existing.source != "ocr":
                 continue
             slots.acquire()
-            futures.append(pool.submit(work, page, png))
+            futures.append(pool.submit(work, page, png, existing))
         for f in futures:
             f.result()
 

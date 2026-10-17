@@ -89,7 +89,7 @@ def create_app(settings: Settings, llm: LLM, store: ManualStore, state: StateSto
             )
         except AnswerError:
             raise HTTPException(502, ANSWER_ERROR)
-        state.append(question, reply)
+        state.append_if(slug, question, reply)
         return {"answer": reply}
 
     @app.get("/")

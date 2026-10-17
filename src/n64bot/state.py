@@ -95,6 +95,16 @@ class StateStore:
             self._history = self._history[-MEMORY_EXCHANGES:]
             self._save()
 
+    def append_if(self, slug: str, question: str, answer: str) -> bool:
+        """Append only if the active game is still `slug`."""
+        with self._lock:
+            if self._game != slug:
+                return False
+            self._history.append(Exchange(question, answer))
+            self._history = self._history[-MEMORY_EXCHANGES:]
+            self._save()
+            return True
+
     def clear_game(self) -> None:
         with self._lock:
             self._game = None

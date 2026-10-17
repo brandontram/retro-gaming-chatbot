@@ -1,6 +1,7 @@
 "use strict";
 
 (function () {
+  var ASK_TIMEOUT_MS = 90000;
   var GENERIC_ERROR = "Something went wrong — try again.";
 
   var $ = function (id) { return document.getElementById(id); };
@@ -26,17 +27,24 @@
   // ---- HTTP -------------------------------------------------------------
 
   // Resolves to {ok, status, data}; never rejects (network errors -> status 0).
-  function api(method, url, body) {
+  function api(method, url, body, timeoutMs) {
     var opts = { method: method, headers: {} };
+    if (timeoutMs) {
+      var ctl = new AbortController();
+      opts.signal = ctl.signal;
+      var t = setTimeout(function () { ctl.abort(); }, timeoutMs);
+    }
     if (body !== undefined) {
       opts.headers["Content-Type"] = "application/json";
       opts.body = JSON.stringify(body);
     }
     return fetch(url, opts).then(function (res) {
       return res.json().catch(function () { return null; }).then(function (data) {
+        clearTimeout(t);
         return { ok: res.ok, status: res.status, data: data };
       });
     }, function () {
+      clearTimeout(t);
       return { ok: false, status: 0, data: null };
     });
   }
@@ -114,6 +122,8 @@
 
   function resetChat(history) {
     generation += 1;
+    inFlight = false;
+    updateControls();
     log.textContent = "";
     (history || []).forEach(function (h) {
       addUser(h.question);
@@ -232,7 +242,7 @@
     addUser(question);
     var typing = addTyping();
 
-    api("POST", "/api/ask", { question: question }).then(function (r) {
+    api("POST", "/api/ask", { question: question }, ASK_TIMEOUT_MS).then(function (r) {
       inFlight = false;
       updateControls();
       if (gen !== generation) return; // chat was cleared (game swapped) meanwhile
@@ -242,6 +252,11 @@
         return;
       }
       addBot(detailOf(r), true);
+      if (!input.value) {
+        input.value = question;
+        autoGrow();
+        updateControls();
+      }
       if (r.status === 409) {
         setGame(null);
         openPicker();

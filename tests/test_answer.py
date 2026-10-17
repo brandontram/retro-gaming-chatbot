@@ -110,3 +110,15 @@ def test_rewrite_llm_error_raises_answer_error():
 def test_store_error_raises_answer_error():
     with pytest.raises(AnswerError):
         call("q", StubStore(exc=RuntimeError("embed down")), FakeLLM())
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        "Sorry, the manual doesn't say how to do that.",
+        "Sorry, the manual doesn’t say.",
+        "The manual does not say anything about it.",
+    ],
+)
+def test_paraphrased_refusal_normalized(reply):
+    assert call("q", StubStore([chunk()]), FakeLLM([reply])) == NOT_IN_MANUAL

@@ -69,6 +69,13 @@ def answer(
     except Exception as e:
         raise AnswerError("answer generation failed") from e
     out = out.strip()
-    if not out or NOT_IN_MANUAL in out:
+    low = out.lower()
+    if (
+        not out
+        or NOT_IN_MANUAL in out
+        or "manual doesn't say" in low
+        or "manual doesn’t say" in low
+        or "manual does not say" in low
+    ):
         return NOT_IN_MANUAL
     return out

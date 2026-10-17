@@ -1,14 +1,14 @@
 from collections.abc import Iterator
 from pathlib import Path
 
-import fitz
+import pymupdf
 import httpx
 from bs4 import BeautifulSoup
 
 
 def render_pages(pdf_path: Path, dpi: int = 150) -> Iterator[tuple[int, bytes]]:
     """Yield (1-based page number, PNG bytes) for each page of the PDF."""
-    with fitz.open(str(pdf_path)) as doc:
+    with pymupdf.open(str(pdf_path)) as doc:
         for i, page in enumerate(doc, start=1):
             yield i, page.get_pixmap(dpi=dpi).tobytes("png")
 

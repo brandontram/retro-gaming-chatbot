@@ -84,3 +84,45 @@ def test_ingest_unresolved_ref_recorded(settings, tmp_path):
     report, _ = _run(settings, FakeLLM())
     assert report.failed_manuals == {"ghost": "could not resolve manual files"}
     assert report.indexed == []
+
+
+@respx.mock
+def test_ingest_reports_ocr_pages(settings, tmp_path, monkeypatch):
+    monkeypatch.setattr(transcribe, "RETRY_BASE_DELAY", 0)
+    _mock(tmp_path)
+    respx.get(BASE + "Tetrisphere_hocr.html").respond(status_code=404)
+    llm = FakeLLM(["ok", "ok", RuntimeError("x"), RuntimeError("x"), RuntimeError("x"), "ok"])
+    import n64bot.ingest as ing
+
+    monkeypatch.setattr(
+        ing, "transcribe_manual",
+        lambda slug, pdf, hocr, l, s, **k: (
+            [transcribe.PageText(1, "text", "ocr"), transcribe.PageText(2, "t", "gemini")],
+            [],
+        ),
+    )
+    report, _ = _run(settings, llm, only="TETRIS")
+    assert report.ocr_pages == {"tetrisphere": [1]}
+    assert json.loads((settings.data_dir / "ingest_failures.json").read_text())["ocr_pages"] == {
+        "tetrisphere": [1]
+    }
+
+
+@respx.mock
+def test_ingest_no_chunks_does_not_wipe_index(settings, tmp_path, monkeypatch):
+    _mock(tmp_path)
+    llm = FakeLLM()
+    store = ManualStore(settings, llm)
+    store.replace_game(
+        "tetrisphere",
+        __import__("n64bot.store", fromlist=["x"]).chunk_pages(
+            "tetrisphere", "Tetrisphere", [transcribe.PageText(1, "old text", "gemini")]
+        ),
+    )
+    import n64bot.ingest as ing
+
+    monkeypatch.setattr(ing, "transcribe_manual", lambda *a, **k: ([], [1, 2]))
+    report, _ = _run(settings, llm, only="TETRIS")
+    assert report.indexed == []
+    assert report.failed_manuals == {"tetrisphere": "no pages transcribed"}
+    assert [s for s, _ in ManualStore(settings, llm).games()] == ["tetrisphere"]

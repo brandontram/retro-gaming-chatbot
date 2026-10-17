@@ -81,3 +81,18 @@ def test_estimate_cost(settings):
     assert estimate_cost(1000, settings) == pytest.approx(
         1000 * (1300 * 0.30 + 600 * 2.50) / 1e6
     )
+
+
+def test_rerun_upgrades_ocr_page_and_keeps_it_on_failure(tmp_path, settings):
+    from conftest import FakeLLM
+
+    pdf = make_pdf(tmp_path / "m.pdf", 2)
+    p = page_path(settings, "game", 1)
+    p.parent.mkdir(parents=True)
+    p.write_text(json.dumps({"page": 1, "text": "ocr", "source": "ocr"}))
+    p2 = page_path(settings, "game", 2)
+    p2.write_text(json.dumps({"page": 2, "text": "ocr2", "source": "ocr"}))
+    llm = FakeLLM(["better", *[RuntimeError("x")] * 3])
+    pages, failed = transcribe_manual("game", pdf, None, llm, settings, workers=1)
+    assert failed == []
+    assert [(x.text, x.source) for x in pages] == [("better", "gemini"), ("ocr2", "ocr")]

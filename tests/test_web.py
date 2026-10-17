@@ -109,3 +109,18 @@ def test_manifest_served(env):
     data = json.loads(r.text)
     assert data["name"] == "N64 Manual Bot"
     assert data["display"] == "standalone"
+
+
+def test_late_answer_not_appended_to_new_game(settings, tmp_path):
+    client, llm, state, _ = build(settings, tmp_path)
+    client.put("/api/game", json={"slug": "yoshi-s-story"})
+    orig = llm.generate
+
+    def swap_then_answer(*a, **kw):
+        state.set_game("banjo-kazooie")  # user swaps while the ask is pending
+        return orig(*a, **kw)
+
+    llm.generate = swap_then_answer
+    r = client.post("/api/ask", json={"question": "jump?"})
+    assert r.status_code == 200 and r.json()["answer"]
+    assert state.history() == []
