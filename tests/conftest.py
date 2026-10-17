@@ -56,3 +56,16 @@ def settings(tmp_path):
 @pytest.fixture
 def fake_llm():
     return FakeLLM()
+
+
+def make_pdf(path, pages: int):
+    """Write a simple PDF with one line of text per page; return path."""
+    import fitz
+
+    doc = fitz.open()
+    for i in range(1, pages + 1):
+        page = doc.new_page()
+        page.insert_text((72, 72), f"Page {i} text")
+    doc.save(str(path))
+    doc.close()
+    return path
