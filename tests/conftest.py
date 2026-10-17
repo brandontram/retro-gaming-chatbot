@@ -48,7 +48,7 @@ class FakeLLM:
 def settings(tmp_path):
     return Settings(
         gemini_api_key="test-key",
-        chat_model="gemini-2.5-flash",
+        chat_model="gemini-3.8-flash",
         embed_model="gemini-embedding-001",
         data_dir=tmp_path / "data",
         price_in_per_mtok=0.30,

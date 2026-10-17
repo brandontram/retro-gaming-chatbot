@@ -54,7 +54,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         raise ValueError("GEMINI_API_KEY is not set")
     return Settings(
         gemini_api_key=key,
-        chat_model=env.get("N64_CHAT_MODEL") or "gemini-2.5-flash",
+        chat_model=env.get("N64_CHAT_MODEL") or "gemini-3.8-flash",
         embed_model=env.get("N64_EMBED_MODEL") or "gemini-embedding-001",
         data_dir=Path(env.get("N64_DATA_DIR") or "data"),
         host=env.get("N64_HOST") or "0.0.0.0",

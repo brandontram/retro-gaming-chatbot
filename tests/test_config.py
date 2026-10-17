@@ -5,7 +5,7 @@ from n64bot.config import load_settings
 
 def test_load_settings_defaults():
     s = load_settings({"GEMINI_API_KEY": "k"})
-    assert s.chat_model == "gemini-2.5-flash"
+    assert s.chat_model == "gemini-3.8-flash"
     assert s.embed_model == "gemini-embedding-001"
     assert s.port == 8000
     assert s.host == "0.0.0.0"

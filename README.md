@@ -6,7 +6,7 @@ Ask questions about Nintendo 64 game manuals from your phone. Answers come only 
 
 1. Create your `.env`: `cp .env.example .env`, then set `GEMINI_API_KEY=your-key-here`.
    Optional settings: `N64_GEMINI_TIMEOUT` (seconds per Gemini call, default 120) and
-   `N64_THINKING_BUDGET` (Gemini 2.5 Flash thinking tokens, default 0 = off).
+   `N64_THINKING_BUDGET` (Gemini Flash thinking tokens, default 0 = off).
 2. Install dependencies: `uv sync`
 
 ## Trial ingest
