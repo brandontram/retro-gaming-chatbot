@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2a1f4a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="N64 Bot">
+  <title>N64 Manual Bot</title>
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="icon" href="/static/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="bar">
+      <span class="glyph" aria-hidden="true">🕹️</span>
+      <span class="cart" id="cart">▮ NO CARTRIDGE</span>
+      <button type="button" class="swap" id="swap" aria-label="Swap game">swap</button>
+    </header>
+
+    <main class="msgs" id="log" aria-live="polite" aria-label="Conversation"></main>
+
+    <form class="inp" id="form" autocomplete="off">
+      <textarea id="question" rows="1" maxlength="500" placeholder="Ask the manual…"
+                aria-label="Ask the manual" enterkeyhint="send" disabled></textarea>
+      <button type="submit" class="send" id="send" aria-label="Send" disabled>➤</button>
+    </form>
+  </div>
+
+  <div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title" hidden>
+    <div class="picker-inner">
+      <div class="picker-head">
+        <h1 id="picker-title">🕹️ Insert cartridge</h1>
+        <button type="button" class="close" id="picker-close" aria-label="Close game picker" hidden>✕</button>
+      </div>
+      <input type="search" id="search" placeholder="Search games…" aria-label="Search games"
+             autocomplete="off" autocapitalize="off" spellcheck="false">
+      <ul class="games" id="games"></ul>
+      <p class="picker-msg" id="picker-msg" hidden></p>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

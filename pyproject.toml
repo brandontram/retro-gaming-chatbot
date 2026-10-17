@@ -1,0 +1,37 @@
+[project]
+name = "n64bot"
+version = "0.1.0"
+description = "N64 manual chatbot"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "google-genai",
+    "chromadb",
+    "pymupdf",
+    "httpx",
+    "beautifulsoup4",
+    "fastapi",
+    "uvicorn",
+    "python-dotenv",
+]
+
+[dependency-groups]
+dev = ["pytest", "respx"]
+
+[project.scripts]
+n64-ingest = "n64bot.ingest:main"
+n64-serve = "n64bot.web:serve"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/n64bot"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+filterwarnings = [
+    "ignore:builtin type .*:DeprecationWarning",
+    "ignore:.*swigvarlink.*:DeprecationWarning",
+]
