@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Literal
 
 from .config import Settings
-from .llm import LLM
+from .llm import LLM, BlockedResponse
 from .pages import render_pages
 
 log = logging.getLogger(__name__)
@@ -20,6 +20,16 @@ TRANSCRIBE_PROMPT = (
     "Transcribe all text on this Nintendo 64 game manual page, in reading order. "
     "Describe any diagrams as text. For controller or button diagrams, output one "
     "line per button in the form `Button: action`. "
+    "Output plain text only, with no commentary or markdown. "
+    "If the page has no content, output nothing."
+)
+
+# Used after a verbatim transcription is blocked by Gemini's recitation filter.
+RESTATE_PROMPT = (
+    "Restate everything on this Nintendo 64 game manual page in your own words, in "
+    "reading order, keeping every fact: names, story, modes, objectives, items and "
+    "every control. For controller or button diagrams, output one line per button in "
+    "the form `Button: action`. "
     "Output plain text only, with no commentary or markdown. "
     "If the page has no content, output nothing."
 )
@@ -55,13 +65,17 @@ def _load(path: Path) -> PageText | None:
 
 
 def _generate(llm: LLM, png: bytes, page: int) -> str:
+    prompt = TRANSCRIBE_PROMPT
     for attempt in range(ATTEMPTS):
         try:
-            return llm.generate(TRANSCRIBE_PROMPT, image_png=png).strip()
+            return llm.generate(prompt, image_png=png).strip()
         except Exception as e:
             log.warning("page %d attempt %d/%d failed: %s", page, attempt + 1, ATTEMPTS, e)
             if attempt == ATTEMPTS - 1:
                 raise
+            if isinstance(e, BlockedResponse) and e.reason == "RECITATION":
+                prompt = RESTATE_PROMPT  # verbatim copy is blocked; reword instead
+                continue
             time.sleep(RETRY_BASE_DELAY * 2**attempt)
     raise AssertionError("unreachable")
 

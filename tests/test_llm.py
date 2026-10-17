@@ -28,3 +28,11 @@ def test_non_stop_raises(reason):
 def test_no_candidates_raises():
     with pytest.raises(RuntimeError):
         response_text(resp(None, candidates=False))
+
+
+def test_blocked_response_carries_reason():
+    from n64bot.llm import BlockedResponse
+
+    with pytest.raises(BlockedResponse) as e:
+        response_text(resp(types.FinishReason.RECITATION))
+    assert e.value.reason == "RECITATION"

@@ -96,3 +96,27 @@ def test_rerun_upgrades_ocr_page_and_keeps_it_on_failure(tmp_path, settings):
     pages, failed = transcribe_manual("game", pdf, None, llm, settings, workers=1)
     assert failed == []
     assert [(x.text, x.source) for x in pages] == [("better", "gemini"), ("ocr2", "ocr")]
+
+
+def test_recitation_block_retries_with_restate_prompt(tmp_path, settings):
+    from conftest import FakeLLM
+    from n64bot.llm import BlockedResponse
+    from n64bot.transcribe import RESTATE_PROMPT, TRANSCRIBE_PROMPT
+
+    pdf = make_pdf(tmp_path / "m.pdf", 1)
+    llm = FakeLLM([BlockedResponse("RECITATION"), "A Button: jump"])
+    pages, failed = transcribe_manual("game", pdf, {1: "ocr text"}, llm, settings, workers=1)
+    assert failed == []
+    assert pages == [PageText(1, "A Button: jump", "gemini")]
+    assert [c["prompt"] for c in llm.generate_calls] == [TRANSCRIBE_PROMPT, RESTATE_PROMPT]
+
+
+def test_other_errors_keep_verbatim_prompt(tmp_path, settings):
+    from conftest import FakeLLM
+    from n64bot.transcribe import TRANSCRIBE_PROMPT
+
+    pdf = make_pdf(tmp_path / "m.pdf", 1)
+    llm = FakeLLM([RuntimeError("503"), "text"])
+    pages, _ = transcribe_manual("game", pdf, None, llm, settings, workers=1)
+    assert pages[0].text == "text"
+    assert [c["prompt"] for c in llm.generate_calls] == [TRANSCRIBE_PROMPT] * 2

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -114,6 +115,7 @@ def main() -> None:
     ap.add_argument("--game", help="exact slug or title substring")
     ap.add_argument("--limit", type=int, help="only the first N matching manuals")
     args = ap.parse_args()
+    sys.stdout.reconfigure(line_buffering=True)  # progress shows up when piped to a log
     logging.basicConfig(level=logging.INFO)
     for noisy in ("httpx", "httpcore", "google_genai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)

@@ -17,15 +17,23 @@ class LLM(Protocol):
     ) -> list[list[float]]: ...
 
 
+class BlockedResponse(RuntimeError):
+    """Gemini finished without completing (e.g. RECITATION, SAFETY)."""
+
+    def __init__(self, reason: str | None):
+        super().__init__(f"Gemini response not completed: finish_reason={reason}")
+        self.reason = reason
+
+
 def response_text(resp) -> str:
     """Return the text of a successful (finish_reason STOP) response, else raise."""
     cands = getattr(resp, "candidates", None)
     if not cands:
-        raise RuntimeError("Gemini returned no candidates (blocked or empty)")
+        raise BlockedResponse(None)
     reason = getattr(cands[0], "finish_reason", None)
     name = getattr(reason, "name", str(reason)) if reason is not None else None
     if name != "STOP":
-        raise RuntimeError(f"Gemini response not completed: finish_reason={name}")
+        raise BlockedResponse(name)
     return resp.text or ""
 
 
