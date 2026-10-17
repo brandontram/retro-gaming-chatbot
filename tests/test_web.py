@@ -101,3 +101,11 @@ def test_root_serves_html(env):
 
 def test_lan_ip_returns_string():
     assert isinstance(lan_ip(), str) and lan_ip()
+
+
+def test_manifest_served(env):
+    r = env[0].get("/static/manifest.webmanifest")
+    assert r.status_code == 200
+    data = json.loads(r.text)
+    assert data["name"] == "N64 Manual Bot"
+    assert data["display"] == "standalone"
