@@ -1,0 +1,20 @@
+# TODO
+
+## Ingest the 5 missing manuals
+
+archive.org failed to serve these PDFs during the full ingest (500 errors / timeouts):
+
+- [ ] Quake (`quake`) — downloadable again as of 2026-10-17
+- [ ] Hydro Thunder (`hydro-thunder`)
+- [ ] Rayman 2 (`rayman-2`)
+- [ ] Tetrisphere (`tetrisphere`)
+- [ ] WWF WrestleMania 2000 (`wwf-wrestlemania-2000`)
+
+Stop `n64-serve` first (both use the Chroma index), then:
+
+```bash
+uv run n64-ingest --game quake   # one manual
+uv run n64-ingest                # or all; only missing work is redone
+```
+
+Failures are listed in `data/ingest_failures.json`.
