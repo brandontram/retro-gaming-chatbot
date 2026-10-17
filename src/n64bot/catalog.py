@@ -72,6 +72,8 @@ def resolve(
         raise LookupError(f"unsupported source URL for {ref.title!r}: {ref.source_url}")
 
     if parts and parts[0] == "details":
+        if len(parts) < 2:
+            raise LookupError(f"malformed archive.org URL: {ref.source_url}")
         item = parts[1]
         files = _files(item, client, cache)
         names = {f["name"]: f for f in files}
@@ -95,15 +97,15 @@ def resolve(
         hocr_name = base + "_hocr.html"
     elif "items" in parts:
         i = parts.index("items")
+        if len(parts) < i + 3:
+            raise LookupError(f"malformed archive.org URL: {ref.source_url}")
         item = parts[i + 1]
         pdf_name = unquote("/".join(parts[i + 2 :]))
         if not pdf_name.endswith(".pdf"):
             raise LookupError(f"not a PDF URL: {ref.source_url}")
         hocr_name = pdf_name[: -len(".pdf")] + "_hocr.html"
-        try:
-            names = {f["name"] for f in _files(item, client, cache)}
-        except httpx.HTTPError:
-            names = set()
+        # metadata errors propagate so the ref stays unresolved and is retried
+        names = {f["name"] for f in _files(item, client, cache)}
         hocr_url = _download_url(item, hocr_name) if hocr_name in names else None
         return ManualRef(
             ref.title, ref.slug, ref.source_url, pdf_url=ref.source_url, hocr_url=hocr_url
@@ -121,20 +123,33 @@ def resolve(
     )
 
 
+def _try_resolve(ref: ManualRef, client: httpx.Client, cache: dict) -> ManualRef:
+    try:
+        return resolve(ref, client, cache)
+    except (LookupError, httpx.HTTPError) as e:
+        log.warning("could not resolve %s: %s", ref.title, e)
+        return ref
+
+
+def _write_atomic(path, refs: list[ManualRef]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps([asdict(x) for x in refs], indent=1))
+    tmp.replace(path)
+
+
 def load_catalog(settings: Settings, client: httpx.Client) -> list[ManualRef]:
     path = settings.catalog_path
-    if path.exists():
-        return [ManualRef(**d) for d in json.loads(path.read_text())]
-    r = client.get(SHEET_CSV_URL, follow_redirects=True)
-    r.raise_for_status()
     cache: dict = {}
-    refs: list[ManualRef] = []
-    for ref in parse_sheet(r.text):
-        try:
-            refs.append(resolve(ref, client, cache))
-        except (LookupError, httpx.HTTPError) as e:
-            log.warning("could not resolve %s: %s", ref.title, e)
-            refs.append(ref)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps([asdict(x) for x in refs], indent=1))
+    if path.exists():
+        refs = [ManualRef(**d) for d in json.loads(path.read_text())]
+        if all(r.pdf_url for r in refs):
+            return refs
+        # retry entries that failed to resolve earlier (e.g. transient errors)
+        refs = [r if r.pdf_url else _try_resolve(r, client, cache) for r in refs]
+    else:
+        r = client.get(SHEET_CSV_URL, follow_redirects=True)
+        r.raise_for_status()
+        refs = [_try_resolve(ref, client, cache) for ref in parse_sheet(r.text)]
+    _write_atomic(path, refs)
     return refs

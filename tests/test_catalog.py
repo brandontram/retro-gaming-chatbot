@@ -5,7 +5,7 @@ import httpx
 import pytest
 import respx
 
-from n64bot.catalog import ManualRef, load_catalog, parse_sheet, resolve, slugify
+from n64bot.catalog import SHEET_CSV_URL, ManualRef, load_catalog, parse_sheet, resolve, slugify
 
 FIX = Path(__file__).parent / "fixtures"
 BULK = "Nintendo64Manuals_201812"
@@ -118,3 +118,46 @@ def test_load_catalog_fetches_then_caches(settings):
         again = load_catalog(settings, c)
     assert again == refs
     assert sheet.call_count == 1
+
+
+TET = "https://ia800206.us.archive.org/22/items/Nintendo64GameManuals/Tetrisphere_-_Manual_-_N64.pdf"
+
+
+@respx.mock
+def test_load_catalog_retries_unresolved_cached_entry(settings):
+    settings.catalog_path.parent.mkdir(parents=True, exist_ok=True)
+    settings.catalog_path.write_text(
+        json.dumps([{"title": "Tetrisphere", "slug": "tetrisphere", "source_url": TET,
+                     "pdf_url": None, "hocr_url": None}])
+    )
+    respx.get("https://archive.org/metadata/Nintendo64GameManuals").respond(
+        json={"files": [{"name": "Tetrisphere_-_Manual_-_N64.pdf", "format": "Text PDF"},
+                        {"name": "Tetrisphere_-_Manual_-_N64_hocr.html", "format": "hOCR"}]}
+    )
+    with httpx.Client() as c:
+        refs = load_catalog(settings, c)
+    assert refs[0].pdf_url == TET and refs[0].hocr_url.endswith("_hocr.html")
+    assert json.loads(settings.catalog_path.read_text())[0]["pdf_url"] == TET
+
+
+@respx.mock
+def test_direct_pdf_metadata_error_propagates_and_is_retried(settings):
+    route = respx.get("https://archive.org/metadata/Nintendo64GameManuals")
+    route.respond(503)
+    respx.get(SHEET_CSV_URL).respond(text=f"Tetrisphere,{TET}\n")
+    with httpx.Client() as c:
+        with pytest.raises(httpx.HTTPError):
+            resolve(ManualRef("T", "t", TET), c)
+        refs = load_catalog(settings, c)
+    assert refs[0].pdf_url is None
+    route.respond(json={"files": []})
+    with httpx.Client() as c:
+        refs = load_catalog(settings, c)
+    assert refs[0].pdf_url == TET
+
+
+@pytest.mark.parametrize("url", ["https://archive.org/details/", "https://archive.org/items",
+                                 "https://ia8.archive.org/22/items/x"])
+def test_malformed_urls_raise_lookup_error(url):
+    with httpx.Client() as c, pytest.raises(LookupError):
+        resolve(ManualRef("X", "x", url), c)
