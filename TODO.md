@@ -18,3 +18,15 @@ uv run n64-ingest                # or all; only missing work is redone
 ```
 
 Failures are listed in `data/ingest_failures.json`.
+
+## Add manuals from other consoles
+
+- [ ] Sony PlayStation (PS1)
+- [ ] Sony PlayStation 2 (PS2)
+- [ ] Xbox 360
+
+Code changes needed first:
+
+- [ ] Store a console field per game in the catalog; one manual sheet per console
+- [ ] Use the console name in the answer/transcribe prompts instead of hardcoded "N64"
+- [ ] Rename the `n64bot` package, `n64-*` commands, `N64_*` env vars and UI title
