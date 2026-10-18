@@ -1,6 +1,8 @@
-# N64 Manual Chatbot
+# Retro Gaming Chatbot
 
-Ask questions about Nintendo 64 game manuals from your phone. Answers come only from the selected game's manual.
+Ask questions about retro game manuals from your phone. Answers come only from the selected game's manual.
+
+Currently supports Nintendo 64 manuals; other consoles can be added later.
 
 ## Setup
 
