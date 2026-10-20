@@ -4,6 +4,12 @@ Ask questions about retro game manuals from your phone. Answers come only from t
 
 Currently supports Nintendo 64 manuals; other consoles can be added later.
 
+## Screenshots
+
+| Pick a game | Ask a question | Follow up | Not in the manual |
+|---|---|---|---|
+| <img src="docs/screenshots/01-pick-game.png" width="200" alt="Game picker filtered to Banjo games"> | <img src="docs/screenshots/02-answer.png" width="200" alt="Answer explaining how to fly, with buttons in bold"> | <img src="docs/screenshots/03-follow-up.png" width="200" alt="Follow-up question about attacking while flying"> | <img src="docs/screenshots/04-not-in-manual.png" width="200" alt="Off-manual question answered with 'The manual doesn't say'"> |
+
 ## Setup
 
 1. Create your `.env`: `cp .env.example .env`, then set `GEMINI_API_KEY=your-key-here`.
